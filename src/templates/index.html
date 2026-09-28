@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Assistant</title>
+    <!-- Fonts inspired by Hermes elegant aesthetic (Serif for headers, clean Sans-serif for body) -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --hermes-orange: #F37021;
+            --dark-charcoal: #2b2b2b;
+            --light-cream: #FDFBF7;
+            --white: #FFFFFF;
+            --border-color: #E5E0D8;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--light-cream);
+            color: var(--dark-charcoal);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            padding: 2rem 0;
+            text-align: center;
+            background-color: var(--white);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-weight: 600;
+            font-size: 2.5rem;
+            margin: 0;
+            color: var(--hermes-orange);
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #777;
+            margin-top: 0.5rem;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 600px;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .upload-container {
+            background-color: var(--white);
+            border: 1px solid var(--border-color);
+            padding: 3rem;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .upload-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.05);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--hermes-orange);
+            margin-bottom: 1.5rem;
+        }
+
+        h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+
+        p {
+            color: #666;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .btn {
+            background-color: var(--hermes-orange);
+            color: var(--white);
+            border: none;
+            padding: 12px 32px;
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background-color: #d9611b;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            color: var(--dark-charcoal);
+            border: 1px solid var(--dark-charcoal);
+            margin-top: 1rem;
+        }
+        
+        .btn-outline:hover {
+            background-color: var(--dark-charcoal);
+            color: var(--white);
+        }
+
+        input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        #file-name {
+            margin-top: 1rem;
+            font-style: italic;
+            font-size: 0.9rem;
+            color: #555;
+            min-height: 1.2em;
+        }
+
+        #upload-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #status-message {
+            margin-top: 1.5rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .success {
+            color: #2e7d32;
+            background-color: #e8f5e9;
+            border: 1px solid #c8e6c9;
+        }
+
+        .error {
+            color: #c62828;
+            background-color: #ffebee;
+            border: 1px solid #ffcdd2;
+        }
+        
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--hermes-orange);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 1rem auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        footer {
+            padding: 2rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #999;
+            width: 100%;
+            border-top: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Study Assistant</h1>
+        <div class="subtitle">Intelligent Document Analysis</div>
+    </header>
+
+    <main>
+        <div class="upload-container">
+            <div class="upload-icon">📄</div>
+            <h2>Upload Study Material</h2>
+            <p>Select your course notes, textbooks, or research papers in PDF format to begin analyzing them.</p>
+            
+            <form id="upload-form">
+                <div class="file-input-wrapper">
+                    <button type="button" class="btn btn-outline">Choose PDF</button>
+                    <input type="file" id="file-input" accept=".pdf" required>
+                </div>
+                <div id="file-name">No file chosen</div>
+                
+                <button type="submit" class="btn" id="submit-btn" style="display: none; margin-top: 1.5rem;">Upload Document</button>
+            </form>
+            
+            <div class="loader" id="loader"></div>
+            <div id="status-message"></div>
+        </div>
+    </main>
+
+    <footer>
+        &copy; 2026 AI Study Assistant. All rights reserved.
+    </footer>
+
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const fileNameDisplay = document.getElementById('file-name');
+        const submitBtn = document.getElementById('submit-btn');
+        const uploadForm = document.getElementById('upload-form');
+        const statusMessage = document.getElementById('status-message');
+        const loader = document.getElementById('loader');
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                if (file.name.toLowerCase().endsWith('.pdf')) {
+                    fileNameDisplay.textContent = file.name;
+                    submitBtn.style.display = 'block';
+                    statusMessage.style.display = 'none';
+                } else {
+                    fileNameDisplay.textContent = 'Please select a valid PDF file.';
+                    submitBtn.style.display = 'none';
+                }
+            } else {
+                fileNameDisplay.textContent = 'No file chosen';
+                submitBtn.style.display = 'none';
+            }
+        });
+
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            submitBtn.style.display = 'none';
+            loader.style.display = 'block';
+            statusMessage.style.display = 'none';
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                loader.style.display = 'none';
+                statusMessage.style.display = 'block';
+                
+                if (response.ok && !result.error) {
+                    statusMessage.textContent = 'File uploaded successfully and saved to the data directory.';
+                    statusMessage.className = 'success';
+                    fileInput.value = '';
+                    fileNameDisplay.textContent = 'No file chosen';
+                } else {
+                    statusMessage.textContent = result.error || 'Upload failed.';
+                    statusMessage.className = 'error';
+                    submitBtn.style.display = 'block';
+                }
+            } catch (error) {
+                loader.style.display = 'none';
+                statusMessage.style.display = 'block';
+                statusMessage.textContent = 'An error occurred during upload.';
+                statusMessage.className = 'error';
+                submitBtn.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
