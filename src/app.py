@@ -29,4 +29,10 @@ async def upload_file(file: UploadFile = File(...)):
     with open(file_location, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
-    return {"filename": file.filename, "message": "File uploaded successfully"}
+    # Trigger embedding processing
+    try:
+        from chatbot.rag import process_and_embed_pdfs
+        process_and_embed_pdfs()
+        return {"filename": file.filename, "message": "File uploaded and processed into vector database successfully"}
+    except Exception as e:
+        return {"filename": file.filename, "message": f"File uploaded but error during processing: {str(e)}"}
