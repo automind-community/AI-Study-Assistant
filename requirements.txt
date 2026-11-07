@@ -6,3 +6,8 @@ fastapi
 uvicorn
 python-multipart
 jinja2
+langchain-community
+langchain-huggingface
+chromadb
+pypdf
+

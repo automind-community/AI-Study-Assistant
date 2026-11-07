@@ -1,18 +1,20 @@
 import os
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
 
 DATA_DIR = "data"
 DB_DIR = "chroma_db"
 
 def get_vectorstore():
     """Load existing vector store if it exists."""
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-    if os.path.exists(DB_DIR) and os.listdir(DB_DIR):
+    if not (os.path.exists(DB_DIR) and os.listdir(DB_DIR)):
+        return None
+    try:
+        from langchain_huggingface import HuggingFaceEmbeddings
+        from langchain_community.vectorstores import Chroma
+        embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
         return Chroma(persist_directory=DB_DIR, embedding_function=embeddings)
-    return None
+    except Exception as e:
+        print(f"Warning: Could not load vectorstore: {e}")
+        return None
 
 def process_and_embed_pdfs():
     """Process all PDFs in the data directory and create/update ChromaDB."""
@@ -22,6 +24,11 @@ def process_and_embed_pdfs():
     if not pdf_files:
         return None
     
+    from langchain_community.document_loaders import PyPDFLoader
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+    from langchain_huggingface import HuggingFaceEmbeddings
+    from langchain_community.vectorstores import Chroma
+
     documents = []
     for pdf_file in pdf_files:
         loader = PyPDFLoader(pdf_file)
@@ -45,3 +52,4 @@ def get_retriever():
     if vectorstore:
         return vectorstore.as_retriever(search_kwargs={"k": 3})
     return None
+
