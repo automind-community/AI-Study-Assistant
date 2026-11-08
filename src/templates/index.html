@@ -6,13 +6,29 @@
     <title>AI Study Assistant</title>
     <!-- Fonts inspired by Hermes elegant aesthetic (Serif for headers, clean Sans-serif for body) -->
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <!-- Markdown rendering for AI responses -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
+        /* ========================================================
+           CSS Variables — Hermes-inspired design tokens
+           ======================================================== */
         :root {
             --hermes-orange: #F37021;
+            --hermes-orange-hover: #d9611b;
             --dark-charcoal: #2b2b2b;
             --light-cream: #FDFBF7;
             --white: #FFFFFF;
             --border-color: #E5E0D8;
+            --header-height: 72px;
+            --input-bar-height: 72px;
+            --tab-bar-height: 48px;
+        }
+
+        /* ========================================================
+           Reset & Base
+           ======================================================== */
+        *, *::before, *::after {
+            box-sizing: border-box;
         }
 
         body {
@@ -23,45 +39,108 @@
             color: var(--dark-charcoal);
             display: flex;
             flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
+            height: 100vh;
+            overflow: hidden;
         }
 
+        /* ========================================================
+           Header
+           ======================================================== */
         header {
             width: 100%;
-            padding: 2rem 0;
+            padding: 1rem 0;
             text-align: center;
             background-color: var(--white);
             border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+            height: var(--header-height);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
         h1 {
             font-family: 'Playfair Display', serif;
             font-weight: 600;
-            font-size: 2.5rem;
+            font-size: 1.8rem;
             margin: 0;
             color: var(--hermes-orange);
             letter-spacing: 1px;
         }
 
         .subtitle {
-            font-size: 0.9rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 2px;
             color: #777;
-            margin-top: 0.5rem;
+            margin-top: 0.25rem;
         }
 
-        main {
+        /* ========================================================
+           Tab Navigation
+           ======================================================== */
+        .tab-bar {
+            display: flex;
+            background-color: var(--white);
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+            height: var(--tab-bar-height);
+        }
+
+        .tab-btn {
             flex: 1;
+            padding: 0.75rem 1rem;
+            border: none;
+            background: transparent;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            cursor: pointer;
+            color: #999;
+            border-bottom: 2px solid transparent;
+            transition: color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .tab-btn:hover {
+            color: var(--dark-charcoal);
+        }
+
+        .tab-btn.active {
+            color: var(--hermes-orange);
+            border-bottom-color: var(--hermes-orange);
+        }
+
+        /* ========================================================
+           Tab Panels
+           ======================================================== */
+        .tab-content {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .tab-panel {
+            display: none;
+            position: absolute;
+            inset: 0;
+            overflow-y: auto;
+        }
+
+        .tab-panel.active {
             display: flex;
             flex-direction: column;
+        }
+
+        /* ========================================================
+           Upload Panel (existing functionality preserved)
+           ======================================================== */
+        #upload-panel {
             align-items: center;
             justify-content: center;
-            width: 100%;
-            max-width: 600px;
             padding: 2rem;
-            box-sizing: border-box;
         }
 
         .upload-container {
@@ -69,10 +148,10 @@
             border: 1px solid var(--border-color);
             padding: 3rem;
             width: 100%;
+            max-width: 600px;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.02);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
-            box-sizing: border-box;
         }
 
         .upload-container:hover {
@@ -93,7 +172,7 @@
             margin-bottom: 1rem;
         }
 
-        p {
+        .upload-container p {
             color: #666;
             margin-bottom: 2rem;
             line-height: 1.6;
@@ -120,7 +199,7 @@
         }
 
         .btn:hover {
-            background-color: #d9611b;
+            background-color: var(--hermes-orange-hover);
         }
 
         .btn-outline {
@@ -129,13 +208,13 @@
             border: 1px solid var(--dark-charcoal);
             margin-top: 1rem;
         }
-        
+
         .btn-outline:hover {
             background-color: var(--dark-charcoal);
             color: var(--white);
         }
 
-        input[type=file] {
+        .file-input-wrapper input[type=file] {
             font-size: 100px;
             position: absolute;
             left: 0;
@@ -178,7 +257,7 @@
             background-color: #ffebee;
             border: 1px solid #ffcdd2;
         }
-        
+
         .loader {
             border: 3px solid #f3f3f3;
             border-top: 3px solid var(--hermes-orange);
@@ -195,55 +274,594 @@
             100% { transform: rotate(360deg); }
         }
 
-        footer {
-            padding: 2rem;
+        /* ========================================================
+           Chat Panel
+           ======================================================== */
+        #chat-panel {
+            display: none;
+            flex-direction: column;
+        }
+
+        #chat-panel.active {
+            display: flex;
+        }
+
+        /* --- Status Bar --- */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 1rem;
+            background-color: var(--white);
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #4caf50;
+            flex-shrink: 0;
+        }
+
+        .status-dot.offline {
+            background-color: #f44336;
+        }
+
+        .status-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .new-chat-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--dark-charcoal);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s ease;
+        }
+
+        .new-chat-btn:hover {
+            border-color: var(--hermes-orange);
+            color: var(--hermes-orange);
+        }
+
+        .model-name {
+            font-weight: 500;
+            color: #aaa;
+        }
+
+        /* --- Messages Area --- */
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            scroll-behavior: smooth;
+        }
+
+        /* --- Welcome State --- */
+        .welcome-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
             text-align: center;
+            padding: 2rem;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .welcome-card .welcome-emoji {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .welcome-card h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.6rem;
+            margin: 0 0 0.5rem 0;
+            color: var(--dark-charcoal);
+        }
+
+        .welcome-card p {
+            color: #888;
+            font-size: 0.95rem;
+            margin: 0 0 2rem 0;
+            max-width: 400px;
+            line-height: 1.5;
+        }
+
+        .prompt-chips {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.5rem;
+            max-width: 500px;
+        }
+
+        .prompt-chip {
+            padding: 0.6rem 1.2rem;
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            background: var(--white);
+            color: var(--dark-charcoal);
+            font-size: 0.85rem;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .prompt-chip:hover {
+            border-color: var(--hermes-orange);
+            color: var(--hermes-orange);
+            background: rgba(243, 112, 33, 0.05);
+            transform: translateY(-1px);
+        }
+
+        /* --- Message Bubbles --- */
+        .message-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.5rem;
+            animation: fadeInUp 0.35s ease;
+        }
+
+        .message-row.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+            background: #f0ece6;
+        }
+
+        .message-row.user .message-avatar {
+            background: rgba(243, 112, 33, 0.15);
+        }
+
+        .message-bubble {
+            max-width: 80%;
+            padding: 0.85rem 1.1rem;
+            line-height: 1.55;
+            font-size: 0.9rem;
+            word-wrap: break-word;
+            position: relative;
+        }
+
+        .message-row.user .message-bubble {
+            background-color: var(--hermes-orange);
+            color: var(--white);
+            border-radius: 16px 4px 16px 16px;
+        }
+
+        .message-row.ai .message-bubble {
+            background-color: var(--white);
+            color: var(--dark-charcoal);
+            border: 1px solid var(--border-color);
+            border-radius: 4px 16px 16px 16px;
+        }
+
+        .message-timestamp {
+            font-size: 0.68rem;
+            color: #bbb;
+            margin-top: 0.3rem;
+            padding: 0 0.2rem;
+        }
+
+        .message-row.user .message-timestamp {
+            text-align: right;
+        }
+
+        .message-content-wrapper {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message-row.user .message-content-wrapper {
+            align-items: flex-end;
+        }
+
+        /* --- Markdown Content Styling (inside AI bubbles) --- */
+        .message-bubble.ai-bubble p {
+            margin: 0 0 0.6rem 0;
+            color: inherit;
+            line-height: 1.55;
+        }
+
+        .message-bubble.ai-bubble p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message-bubble.ai-bubble h1,
+        .message-bubble.ai-bubble h2,
+        .message-bubble.ai-bubble h3,
+        .message-bubble.ai-bubble h4 {
+            font-family: 'Inter', sans-serif;
+            margin: 0.8rem 0 0.4rem 0;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .message-bubble.ai-bubble h1:first-child,
+        .message-bubble.ai-bubble h2:first-child,
+        .message-bubble.ai-bubble h3:first-child {
+            margin-top: 0;
+        }
+
+        .message-bubble.ai-bubble ul,
+        .message-bubble.ai-bubble ol {
+            margin: 0.4rem 0;
+            padding-left: 1.4rem;
+        }
+
+        .message-bubble.ai-bubble li {
+            margin-bottom: 0.2rem;
+        }
+
+        .message-bubble.ai-bubble strong {
+            font-weight: 600;
+        }
+
+        .message-bubble.ai-bubble em {
+            font-style: italic;
+        }
+
+        .message-bubble.ai-bubble code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 0.82rem;
+            background: rgba(0, 0, 0, 0.06);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+        }
+
+        .message-bubble.ai-bubble pre {
+            margin: 0.6rem 0;
+            padding: 0.8rem 1rem;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #333;
+        }
+
+        .message-bubble.ai-bubble pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
             font-size: 0.8rem;
-            color: #999;
-            width: 100%;
+        }
+
+        .message-bubble.ai-bubble blockquote {
+            margin: 0.5rem 0;
+            padding: 0.4rem 0 0.4rem 0.8rem;
+            border-left: 3px solid var(--hermes-orange);
+            color: #666;
+        }
+
+        .message-bubble.ai-bubble a {
+            color: var(--hermes-orange);
+            text-decoration: underline;
+        }
+
+        /* --- Typing Indicator --- */
+        .typing-indicator {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.5rem;
+            animation: fadeInUp 0.35s ease;
+        }
+
+        .typing-bubble {
+            background-color: var(--white);
+            border: 1px solid var(--border-color);
+            border-radius: 4px 16px 16px 16px;
+            padding: 1rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #bbb;
+            animation: typingBounce 1.4s ease-in-out infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-6px); opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* --- Input Bar --- */
+        .input-bar {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.6rem;
+            padding: 0.8rem 1rem;
+            background-color: var(--white);
             border-top: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .input-bar textarea {
+            flex: 1;
+            resize: none;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.7rem 1rem;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            color: var(--dark-charcoal);
+            background: var(--light-cream);
+            outline: none;
+            min-height: 42px;
+            max-height: 120px; /* roughly 4 rows */
+            line-height: 1.5;
+            transition: border-color 0.2s ease;
+            overflow-y: auto;
+        }
+
+        .input-bar textarea::placeholder {
+            color: #bbb;
+        }
+
+        .input-bar textarea:focus {
+            border-color: var(--hermes-orange);
+        }
+
+        .send-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: none;
+            background-color: var(--hermes-orange);
+            color: var(--white);
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s ease, opacity 0.2s ease, transform 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background-color: var(--hermes-orange-hover);
+            transform: scale(1.05);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .send-btn.loading {
+            pointer-events: none;
+            animation: spin 1s linear infinite;
+        }
+
+        /* ========================================================
+           Footer
+           ======================================================== */
+        footer {
+            display: none; /* hidden in app mode to save vertical space */
+        }
+
+        /* ========================================================
+           Responsive — mobile
+           ======================================================== */
+        @media (max-width: 768px) {
+            h1 { font-size: 1.4rem; }
+            .subtitle { font-size: 0.65rem; }
+
+            .message-bubble {
+                max-width: 90%;
+            }
+
+            .upload-container {
+                padding: 2rem 1.5rem;
+            }
+
+            .prompt-chips {
+                gap: 0.4rem;
+            }
+
+            .prompt-chip {
+                font-size: 0.8rem;
+                padding: 0.5rem 0.9rem;
+            }
+
+            .welcome-card h2 {
+                font-size: 1.3rem;
+            }
         }
     </style>
 </head>
 <body>
 
+    <!-- ========================================================
+         Header
+         ======================================================== -->
     <header>
         <h1>Study Assistant</h1>
         <div class="subtitle">Intelligent Document Analysis</div>
     </header>
 
-    <main>
-        <div class="upload-container">
-            <div class="upload-icon">📄</div>
-            <h2>Upload Study Material</h2>
-            <p>Select your course notes, textbooks, or research papers in PDF format to begin analyzing them.</p>
-            
-            <form id="upload-form">
-                <div class="file-input-wrapper">
-                    <button type="button" class="btn btn-outline">Choose PDF</button>
-                    <input type="file" id="file-input" accept=".pdf" required>
+    <!-- ========================================================
+         Tab Navigation
+         ======================================================== -->
+    <nav class="tab-bar">
+        <button class="tab-btn active" data-tab="chat-panel">💬 Chat</button>
+        <button class="tab-btn" data-tab="upload-panel">📄 Upload</button>
+    </nav>
+
+    <!-- ========================================================
+         Tab Content Area
+         ======================================================== -->
+    <div class="tab-content">
+
+        <!-- ====================================================
+             Chat Panel (DEFAULT active tab)
+             ==================================================== -->
+        <div id="chat-panel" class="tab-panel active">
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="status-indicator">
+                    <span class="status-dot" id="status-dot"></span>
+                    <span id="status-text">Checking status...</span>
                 </div>
-                <div id="file-name">No file chosen</div>
-                
-                <button type="submit" class="btn" id="submit-btn" style="display: none; margin-top: 1.5rem;">Upload Document</button>
-            </form>
-            
-            <div class="loader" id="loader"></div>
-            <div id="status-message"></div>
-        </div>
-    </main>
+                <div class="status-actions">
+                    <span class="model-name" id="model-name">llama-3.1-8b-instant</span>
+                    <button class="new-chat-btn" id="new-chat-btn" title="Start a fresh conversation">↻ New Chat</button>
+                </div>
+            </div>
+
+            <!-- Messages Area -->
+            <div class="messages-area" id="messages-area">
+                <!-- Welcome Card (shown when no messages) -->
+                <div class="welcome-card" id="welcome-card">
+                    <div class="welcome-emoji">👋</div>
+                    <h2>Welcome to Study Assistant</h2>
+                    <p>Upload your study materials and ask me anything about them!</p>
+                    <div class="prompt-chips">
+                        <button class="prompt-chip" data-prompt="Summarize the key concepts">Summarize the key concepts</button>
+                        <button class="prompt-chip" data-prompt="Create flashcards from the material">Create flashcards from the material</button>
+                        <button class="prompt-chip" data-prompt="Explain this topic in simple terms">Explain this topic in simple terms</button>
+                        <button class="prompt-chip" data-prompt="Generate practice questions">Generate practice questions</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Bar -->
+            <div class="input-bar">
+                <textarea
+                    id="chat-input"
+                    rows="1"
+                    placeholder="Ask about your study materials..."
+                    aria-label="Chat message input"
+                ></textarea>
+                <button class="send-btn" id="send-btn" disabled aria-label="Send message">➤</button>
+            </div>
+
+        </div><!-- /chat-panel -->
+
+        <!-- ====================================================
+             Upload Panel (existing functionality preserved)
+             ==================================================== -->
+        <div id="upload-panel" class="tab-panel">
+            <div class="upload-container">
+                <div class="upload-icon">📄</div>
+                <h2>Upload Study Material</h2>
+                <p>Select your course notes, textbooks, or research papers in PDF format to begin analyzing them.</p>
+
+                <form id="upload-form">
+                    <div class="file-input-wrapper">
+                        <button type="button" class="btn btn-outline">Choose PDF</button>
+                        <input type="file" id="file-input" accept=".pdf" required>
+                    </div>
+                    <div id="file-name">No file chosen</div>
+
+                    <button type="submit" class="btn" id="submit-btn" style="display: none; margin-top: 1.5rem;">Upload Document</button>
+                </form>
+
+                <div class="loader" id="loader"></div>
+                <div id="status-message"></div>
+            </div>
+        </div><!-- /upload-panel -->
+
+    </div><!-- /tab-content -->
 
     <footer>
         &copy; 2026 AI Study Assistant. All rights reserved.
     </footer>
 
+    <!-- ========================================================
+         JavaScript
+         ======================================================== -->
     <script>
-        const fileInput = document.getElementById('file-input');
+        /* ==============================================================
+           Utility: Format current time as HH:MM
+           ============================================================== */
+        function formatTime(date) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        /* ==============================================================
+           Tab Switching
+           ============================================================== */
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabPanels  = document.querySelectorAll('.tab-panel');
+
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.dataset.tab;
+
+                // Deactivate all tabs & panels
+                tabButtons.forEach(b => b.classList.remove('active'));
+                tabPanels.forEach(p => p.classList.remove('active'));
+
+                // Activate selected
+                btn.classList.add('active');
+                document.getElementById(targetId).classList.add('active');
+            });
+        });
+
+        /* ==============================================================
+           Upload Form (preserved exactly from original)
+           ============================================================== */
+        const fileInput     = document.getElementById('file-input');
         const fileNameDisplay = document.getElementById('file-name');
-        const submitBtn = document.getElementById('submit-btn');
-        const uploadForm = document.getElementById('upload-form');
+        const submitBtn     = document.getElementById('submit-btn');
+        const uploadForm    = document.getElementById('upload-form');
         const statusMessage = document.getElementById('status-message');
-        const loader = document.getElementById('loader');
+        const loader        = document.getElementById('loader');
 
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
@@ -264,7 +882,7 @@
 
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const file = fileInput.files[0];
             if (!file) return;
 
@@ -280,17 +898,20 @@
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const result = await response.json();
-                
+
                 loader.style.display = 'none';
                 statusMessage.style.display = 'block';
-                
+
                 if (response.ok && !result.error) {
                     statusMessage.textContent = 'File uploaded successfully and saved to the data directory.';
                     statusMessage.className = 'success';
                     fileInput.value = '';
                     fileNameDisplay.textContent = 'No file chosen';
+                    if (typeof checkStatus === 'function') {
+                        checkStatus();
+                    }
                 } else {
                     statusMessage.textContent = result.error || 'Upload failed.';
                     statusMessage.className = 'error';
@@ -304,6 +925,306 @@
                 submitBtn.style.display = 'block';
             }
         });
+
+        /* ==============================================================
+           Chat UI — DOM references
+           ============================================================== */
+        const messagesArea = document.getElementById('messages-area');
+        const welcomeCard  = document.getElementById('welcome-card');
+        const chatInput    = document.getElementById('chat-input');
+        const sendButton   = document.getElementById('send-btn');
+        const statusDot    = document.getElementById('status-dot');
+        const statusText   = document.getElementById('status-text');
+        const modelNameEl  = document.getElementById('model-name');
+        const newChatBtn   = document.getElementById('new-chat-btn');
+
+        /** Track whether we are waiting for an AI response */
+        let isWaitingForResponse = false;
+
+        /* ==============================================================
+           Conversation Memory (Thread ID Management)
+           ============================================================== */
+        const THREAD_STORAGE_KEY = 'ai_study_assistant_thread_id';
+
+        function generateUUID() {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
+            return 'th_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+        }
+
+        function getOrCreateThreadId() {
+            let threadId = localStorage.getItem(THREAD_STORAGE_KEY);
+            if (!threadId) {
+                threadId = generateUUID();
+                localStorage.setItem(THREAD_STORAGE_KEY, threadId);
+            }
+            return threadId;
+        }
+
+        function resetConversation() {
+            const newThreadId = generateUUID();
+            localStorage.setItem(THREAD_STORAGE_KEY, newThreadId);
+
+            // Clear chat bubbles and show welcome card
+            messagesArea.innerHTML = '';
+            if (welcomeCard) {
+                welcomeCard.style.display = 'flex';
+                messagesArea.appendChild(welcomeCard);
+            }
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            sendButton.disabled = true;
+            chatInput.focus();
+        }
+
+        if (newChatBtn) {
+            newChatBtn.addEventListener('click', () => {
+                if (!isWaitingForResponse) {
+                    resetConversation();
+                }
+            });
+        }
+
+        /* ==============================================================
+           Backend Wiring — Status Check & Chat Fetch
+           ============================================================== */
+
+        /** Check backend health and model/docs status via GET /status */
+        async function checkStatus() {
+            try {
+                const response = await fetch('/status');
+                if (!response.ok) throw new Error('Status service error');
+                const data = await response.json();
+
+                if (statusDot) statusDot.classList.remove('offline');
+                if (statusText) {
+                    statusText.textContent = data.has_documents 
+                        ? 'Online • Documents Ready' 
+                        : 'Online • No Docs Uploaded';
+                }
+                if (modelNameEl && data.model) {
+                    modelNameEl.textContent = data.model;
+                }
+            } catch (err) {
+                console.warn('Status check failed:', err);
+                if (statusDot) statusDot.classList.add('offline');
+                if (statusText) statusText.textContent = 'Offline';
+            }
+        }
+
+        /** Send message to POST /chat */
+        async function sendMessage(message) {
+            const threadId = getOrCreateThreadId();
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: message,
+                    thread_id: threadId
+                })
+            });
+
+            if (!response.ok) {
+                let errorDetails = `Server error (${response.status})`;
+                try {
+                    const errorJson = await response.json();
+                    if (errorJson.error) errorDetails = errorJson.error;
+                } catch (_) {}
+                throw new Error(errorDetails);
+            }
+
+            const data = await response.json();
+            if (data.thread_id) {
+                localStorage.setItem(THREAD_STORAGE_KEY, data.thread_id);
+            }
+            return data;
+        }
+
+        /* ==============================================================
+           Chat Input — Auto-expanding textarea
+           ============================================================== */
+        chatInput.addEventListener('input', () => {
+            // Auto-expand up to max 120px
+            chatInput.style.height = 'auto';
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+
+            // Enable / disable send button
+            sendButton.disabled = chatInput.value.trim().length === 0 || isWaitingForResponse;
+        });
+
+        /* ==============================================================
+           Send on Enter (Shift+Enter = newline)
+           ============================================================== */
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!sendButton.disabled) {
+                    handleSend();
+                }
+            }
+        });
+
+        sendButton.addEventListener('click', () => {
+            if (!sendButton.disabled) {
+                handleSend();
+            }
+        });
+
+        /* ==============================================================
+           Example prompt chips
+           ============================================================== */
+        document.querySelectorAll('.prompt-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                chatInput.value = chip.dataset.prompt;
+                chatInput.dispatchEvent(new Event('input')); // trigger resize + enable button
+                chatInput.focus();
+            });
+        });
+
+        /* ==============================================================
+           Core Chat Logic
+           ============================================================== */
+
+        /** Scroll messages area to the bottom */
+        function scrollToBottom() {
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        /**
+         * Create a message row element.
+         * @param {'user'|'ai'} role
+         * @param {string} content — plain text for user, markdown string for AI
+         * @returns {HTMLElement}
+         */
+        function createMessageElement(role, content) {
+            const row = document.createElement('div');
+            row.className = `message-row ${role}`;
+
+            // Avatar
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = role === 'user' ? '🧑' : '🤖';
+
+            // Content wrapper (bubble + timestamp)
+            const wrapper = document.createElement('div');
+            wrapper.className = 'message-content-wrapper';
+
+            // Bubble
+            const bubble = document.createElement('div');
+            bubble.className = `message-bubble ${role === 'ai' ? 'ai-bubble' : ''}`;
+
+            if (role === 'ai') {
+                // Render markdown for AI messages with marked.js
+                bubble.innerHTML = marked.parse(content);
+            } else {
+                bubble.textContent = content;
+            }
+
+            // Timestamp
+            const ts = document.createElement('div');
+            ts.className = 'message-timestamp';
+            ts.textContent = formatTime(new Date());
+
+            wrapper.appendChild(bubble);
+            wrapper.appendChild(ts);
+
+            row.appendChild(avatar);
+            row.appendChild(wrapper);
+
+            return row;
+        }
+
+        /** Show the typing indicator */
+        function showTypingIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'typing-indicator';
+            indicator.id = 'typing-indicator';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = '🤖';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'typing-bubble';
+            bubble.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+
+            indicator.appendChild(avatar);
+            indicator.appendChild(bubble);
+
+            messagesArea.appendChild(indicator);
+            scrollToBottom();
+        }
+
+        /** Remove the typing indicator */
+        function removeTypingIndicator() {
+            const el = document.getElementById('typing-indicator');
+            if (el) el.remove();
+        }
+
+        /** Handle sending a message */
+        async function handleSend() {
+            const text = chatInput.value.trim();
+            if (!text || isWaitingForResponse) return;
+
+            // Hide welcome card on first message
+            if (welcomeCard) {
+                welcomeCard.style.display = 'none';
+            }
+
+            // Add user message bubble
+            const userMsg = createMessageElement('user', text);
+            messagesArea.appendChild(userMsg);
+            scrollToBottom();
+
+            // Clear input and reset height
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            sendButton.disabled = true;
+
+            // Set loading state
+            isWaitingForResponse = true;
+            chatInput.disabled = true;
+            chatInput.placeholder = 'Thinking...';
+            sendButton.classList.add('loading');
+
+            // Show typing indicator
+            showTypingIndicator();
+
+            try {
+                // Call real backend endpoint
+                const result = await sendMessage(text);
+                removeTypingIndicator();
+
+                // Add real AI response rendered as markdown
+                const replyText = result.response || "No response received.";
+                const aiMsg = createMessageElement('ai', replyText);
+                messagesArea.appendChild(aiMsg);
+                scrollToBottom();
+            } catch (error) {
+                removeTypingIndicator();
+                console.error('Chat request failed:', error);
+
+                // Add error notification message in chat
+                const errorBubble = createMessageElement('ai', `⚠️ **Error:** ${error.message || 'Unable to connect to the study assistant. Please check your network and try again.'}`);
+                messagesArea.appendChild(errorBubble);
+                scrollToBottom();
+            } finally {
+                // Restore input state
+                isWaitingForResponse = false;
+                chatInput.disabled = false;
+                chatInput.placeholder = 'Ask about your study materials...';
+                sendButton.classList.remove('loading');
+                sendButton.disabled = chatInput.value.trim().length === 0;
+                chatInput.focus();
+            }
+        }
+
+        // Run status check immediately on load and poll every 30s
+        checkStatus();
+        setInterval(checkStatus, 30000);
     </script>
 </body>
 </html>
