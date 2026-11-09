@@ -1,3 +1,4 @@
+import os
 from .states import chatState
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
@@ -5,8 +6,9 @@ from langchain_core.messages import SystemMessage
 from .rag import get_retriever
 
 load_dotenv()
+model_name = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 llm = ChatGroq(
-    model="llama-3.1-8b-instant"
+    model=model_name
 )
 
 def chat_node(state : chatState):
