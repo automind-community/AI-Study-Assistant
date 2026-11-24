@@ -8,6 +8,8 @@ python-multipart
 jinja2
 langchain-community
 langchain-huggingface
+sentence-transformers
+langchain-text-splitters
 chromadb
 pypdf
 

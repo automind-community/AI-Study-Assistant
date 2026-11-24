@@ -3,3 +3,5 @@
 uv.lock
 __pycache__/
 *.pyc
+data/
+chroma_db/
