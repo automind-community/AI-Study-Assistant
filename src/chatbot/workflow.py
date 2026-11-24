@@ -16,5 +16,8 @@ graph.add_edge("chat_node", END)
 
 
 chat_workflow = graph.compile(checkpointer=checkpointer)
+# The web API supplies its owner-scoped SQLite history on every request. Keep
+# process-local CLI memory separate so deleted chats leave no web checkpoints.
+saved_chat_workflow = graph.compile()
 
 
