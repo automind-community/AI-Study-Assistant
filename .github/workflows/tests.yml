@@ -1,0 +1,53 @@
+name: Tests
+
+'on':
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    env:
+      PYTHONPATH: src
+      HF_HUB_OFFLINE: "1"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Pre-install CPU-only PyTorch to prevent downloading multi-GB CUDA wheels on CPU runners
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+
+      - name: Run test_documents.py
+        run: python -B -m unittest discover -s tests -p test_documents.py -v
+
+      - name: Run test_document_deletion.py
+        run: python -B -m unittest discover -s tests -p test_document_deletion.py -v
+
+      - name: Run test_conversations.py
+        run: python -B -m unittest discover -s tests -p test_conversations.py -v
